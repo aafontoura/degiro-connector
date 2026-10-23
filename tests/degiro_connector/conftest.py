@@ -74,7 +74,6 @@ def config() -> dict[str, Any] | None:
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.quotecast
 def user_token(config, request) -> int:
     """Get `--user-token` argument from `CONFIG_FILE` or CLI.
 
@@ -93,7 +92,6 @@ def user_token(config, request) -> int:
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.trading
 def credentials(config, request) -> Credentials:
     """Get `--user-token` argument from `CONFIG_FILE` or CLI.
 

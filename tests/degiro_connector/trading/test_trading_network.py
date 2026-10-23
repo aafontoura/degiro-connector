@@ -7,6 +7,12 @@ import time
 import pytest
 import urllib3
 
+pytest.importorskip(
+    "degiro_connector.trading.models.trading_pb2",
+    reason="Legacy live suite targets removed protobuf API; hardened reads are tested offline",
+    exc_type=ModuleNotFoundError,
+)
+
 from degiro_connector.trading.models.trading_pb2 import (
     AccountOverview,
     Agenda,

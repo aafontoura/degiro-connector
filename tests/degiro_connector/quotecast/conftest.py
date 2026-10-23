@@ -14,18 +14,15 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 # SETUP FIXTURES
-@pytest.mark.quotecast
 @pytest.fixture(scope="module")
 def logger() -> logging.Logger:
     return TickerFetcher.build_logger()
 
-@pytest.mark.quotecast
 @pytest.fixture(scope="module")
 def session() -> requests.Session:
     return TickerFetcher.build_session()
 
 
-@pytest.mark.quotecast
 @pytest.fixture(scope="module")
 def stock_request() -> ChartRequest:
     chart_request = ChartRequest(
@@ -51,3 +48,9 @@ def stock_request() -> ChartRequest:
     )
 
     return chart_request
+
+
+@pytest.fixture
+def quotecast(user_token):
+    from degiro_connector.quotecast.api import API
+    return API(user_token=user_token)
