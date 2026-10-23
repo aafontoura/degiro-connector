@@ -67,7 +67,6 @@ class ActionEditNote(AbstractAction):
         )
         prepped = session.prepare_request(request)
 
-        print(json_map)
 
         modified_note = None
         try:
@@ -75,12 +74,10 @@ class ActionEditNote(AbstractAction):
             response.raise_for_status()
             modified_note = NoteEditResponse.model_validate_json(json_data=response.text).data
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
         return modified_note

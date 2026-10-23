@@ -5,6 +5,18 @@ import requests
 
 import degiro_connector.core.constants.headers as default_headers
 
+# Hardened fork: a request sent without a timeout gets this (connect, read)
+# budget instead of waiting forever. Callers with a tighter budget pass their
+# own.
+DEFAULT_TIMEOUT = (10, 60)
+
+
+class _BoundedSession(requests.Session):
+    def send(self, request, **kwargs):
+        if kwargs.get("timeout") is None:
+            kwargs["timeout"] = DEFAULT_TIMEOUT
+        return super().send(request, **kwargs)
+
 
 class ModelSession:
     """Handle the Requests Session objects in a threadsafe manner."""
@@ -28,7 +40,10 @@ class ModelSession:
                 Session object with the right headers and hooks.
         """
 
-        session = requests.Session()
+        session = _BoundedSession()
+        # Hardened fork: never pick up proxies, netrc or CA overrides from the
+        # environment.
+        session.trust_env = False
 
         if isinstance(headers, dict):
             session.headers.update(headers)

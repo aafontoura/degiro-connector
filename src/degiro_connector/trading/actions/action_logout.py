@@ -7,6 +7,10 @@ from degiro_connector.trading.models.credentials import Credentials
 from degiro_connector.core.abstracts.abstract_action import AbstractAction
 
 
+# Hardened fork: logout must not hang the caller's teardown.
+LOGOUT_TIMEOUT = (2, 5)
+
+
 class ActionLogout(AbstractAction):
     @classmethod
     def logout(
@@ -39,19 +43,19 @@ class ActionLogout(AbstractAction):
         response_raw = None
 
         try:
-            response_raw = session.send(prepped)
+            response_raw = session.send(
+                prepped,
+                allow_redirects=False,
+                timeout=LOGOUT_TIMEOUT,
+            )
             response_raw.raise_for_status()
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
             status_code = getattr(response_raw, "status_code", "No status_code found.")
-            text = getattr(response_raw, "text", "No text found.")
-            logger.fatal(status_code)
-            logger.fatal(text)
+            logger.fatal("status_code: %s", status_code)
             return None
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
         return response_raw.status_code == 200

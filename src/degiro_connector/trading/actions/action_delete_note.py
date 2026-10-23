@@ -54,12 +54,10 @@ class ActionDeleteNote(AbstractAction):
             response = session.send(prepped)
             response.raise_for_status()
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
         return response.status_code == 200

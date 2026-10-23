@@ -3,7 +3,7 @@ import logging
 import polars as pl
 
 from degiro_connector.trading.api import API as TradingAPI
-from degiro_connector.trading.models.credentials import build_credentials
+from examples.credentials_from_config import build_credentials
 
 logging.basicConfig(level=logging.DEBUG)
 

@@ -57,7 +57,7 @@ def pytest_addoption(parser):
         action="store",
         default=None,
         help="Trading credentials : `one_time_password`",
-        type=int,
+        type=str,
     )
 
 

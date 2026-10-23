@@ -62,12 +62,10 @@ class ActionPutFavoriteProduct(AbstractAction):
             response_raw = session.send(prepped)
             response_raw.raise_for_status()
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
         return response_raw.status_code == 200

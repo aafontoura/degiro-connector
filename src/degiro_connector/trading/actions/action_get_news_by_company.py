@@ -60,8 +60,7 @@ class ActionGetNewsByCompany(AbstractAction):
 
             return company_news
         except Exception as e:
-            logger.fatal(e)
-            logger.fatal(response_raw)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
     def call(

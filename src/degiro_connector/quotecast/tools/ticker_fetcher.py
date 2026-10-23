@@ -98,10 +98,9 @@ class TickerFetcher:
             response = session.send(request=prepped)
             response_dict = loads(response.text)
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
-        logger.info("get_session_id:response_dict: %s", response_dict)
 
         if "sessionId" in response_dict:
             return response_dict["sessionId"]
@@ -161,12 +160,10 @@ class TickerFetcher:
                 request_duration=timedelta(microseconds=duration_ns // 1000),
             )
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
 
         return ticker
@@ -241,7 +238,6 @@ class TickerFetcher:
         url = f"{url}/{session_id}"
         data = cls.build_ticker_request_payload(ticker_request=ticker_request)
 
-        logger.info("subscribe:data %s", data[:100])
 
         session_request = requests.Request(method="POST", url=url, data=data)
         prepped = session.prepare_request(request=session_request)
@@ -256,10 +252,8 @@ class TickerFetcher:
 
             return True
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
             return None

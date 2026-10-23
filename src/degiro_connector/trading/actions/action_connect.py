@@ -11,6 +11,11 @@ from degiro_connector.trading.models.credentials import Credentials
 from degiro_connector.trading.models.login import Login, LoginError, LoginSuccess
 
 
+# Hardened fork: finite (connect, read) budget for every login-path request,
+# the maintenance probe included.
+LOGIN_TIMEOUT = (5, 15)
+
+
 class ActionConnect(AbstractAction):
     @classmethod
     def get_session_id(
@@ -57,18 +62,22 @@ class ActionConnect(AbstractAction):
         one_time_password = None
         in_app_token = None
 
-        if credentials.one_time_password or credentials.totp_secret_key:
+        # Hardened fork: explicit None checks, so "000000" still takes the OTP
+        # branch, and the OTP stays the six-character string it was typed as.
+        if (
+            credentials.one_time_password is not None
+            or credentials.totp_secret_key is not None
+        ):
             url = urls.LOGIN + "/totp"
 
-            if credentials.one_time_password:
-                one_time_password = str(credentials.one_time_password)
+            if credentials.one_time_password is not None:
+                one_time_password = credentials.one_time_password
             else:
                 totp_secret_key = credentials.totp_secret_key
                 one_time_password = str(pyotp.TOTP(totp_secret_key).now())
-        elif credentials.in_app_token:
+        elif credentials.in_app_token is not None:
             url = urls.LOGIN + "/in-app"
-            if credentials.in_app_token:
-                in_app_token = credentials.in_app_token
+            in_app_token = credentials.in_app_token
         else:
             url = urls.LOGIN
 
@@ -96,26 +105,25 @@ class ActionConnect(AbstractAction):
         login_sucess = None
 
         try:
-            response = session.send(prepped)
+            response = session.send(
+                prepped,
+                allow_redirects=False,
+                timeout=LOGIN_TIMEOUT,
+            )
 
             if response.status_code == 200:
                 login_sucess = LoginSuccess.model_validate_json(json_data=response.text)
             elif response.status_code == 405:
-                login_error = cls.__get_maintenance_message()
+                login_error = cls.__get_maintenance_message(session)
             else:
                 login_error = LoginError.model_validate_json(json_data=response.text)
         except requests.HTTPError as e:
-            logger.fatal(e)
-            if isinstance(e.response, requests.Response):
-                logger.fatal(e.response.text)
+            logger.fatal("request failed: %s", type(e).__name__)
         except Exception as e:
-            logger.fatal(e)
+            logger.fatal("request failed: %s", type(e).__name__)
 
         if login_error:
-            logger.fatal(
-                "login_error:%s",
-                login_error.model_dump(mode="python", by_alias=True, exclude_none=True),
-            )
+            logger.fatal("login_error: status %s", login_error.status)
 
         if login_error:
             if login_error.captcha_required:
@@ -136,11 +144,6 @@ class ActionConnect(AbstractAction):
         if login_sucess is None:
             raise DeGiroConnectionError("No session id returned.", login_error)
 
-        logger.info(
-            "login_sucess: %s",
-            login_sucess.model_dump(mode="python", by_alias=True, exclude_none=True),
-        )
-
         return login_sucess.session_id
 
     def call(self):
@@ -158,9 +161,13 @@ class ActionConnect(AbstractAction):
         return connection_storage.session_id
 
     @classmethod
-    def __get_maintenance_message(cls) -> LoginError:
-        response = requests.get(
+    def __get_maintenance_message(cls, session: requests.Session) -> LoginError:
+        # Hardened fork: through the caller's session (no ambient proxy, netrc
+        # or CA settings), with a timeout and no redirects.
+        response = session.get(
             "https://trader.degiro.nl/login",
+            allow_redirects=False,
+            timeout=LOGIN_TIMEOUT,
             headers={
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"

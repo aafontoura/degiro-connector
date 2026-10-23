@@ -12,7 +12,8 @@ class LoginSuccess(BaseModel):
     is_pass_code_enabled: bool | None = Field(default=None)
     locale: str | None = Field(default=None)
     redirect_url: str | None = Field(default=None)
-    session_id: str
+    # Hardened fork: never shown in repr (exception args, debug output).
+    session_id: str = Field(repr=False)
     status: int | None = Field(default=None)
     status_text: str | None = Field(default=None)
 
@@ -24,12 +25,12 @@ class LoginError(BaseModel):
     )
 
     login_failures: int | None = Field(default=None)
-    error: str | None = Field(default=None)
+    error: str | None = Field(default=None, repr=False)
     path: str | None = Field(default=None)
     status: int
     status_text: str | None = Field(default=None)
     timestamp: date | None = Field(default=None)
-    in_app_token: str | None = Field(default=None)
+    in_app_token: str | None = Field(default=None, repr=False)
     captcha_required: bool | None = Field(default=None)
 
 

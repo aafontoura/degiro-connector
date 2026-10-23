@@ -2,7 +2,7 @@ import logging
 from datetime import date
 
 from degiro_connector.trading.api import API as TradingAPI
-from degiro_connector.trading.models.credentials import build_credentials
+from examples.credentials_from_config import build_credentials
 from degiro_connector.trading.models.order import HistoryRequest
 
 logging.basicConfig(level=logging.DEBUG)

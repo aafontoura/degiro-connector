@@ -2,6 +2,11 @@
 
 This is yet another library to access Degiro's API.
 
+> **Hardened fork.** This branch (`aafontoura/degiro-connector@hardened`) is a
+> security-hardened fork whose only supported surface is the read-only
+> `degiro_connector.hardened` client. Order actions and the file/env
+> credential helper are removed. See [HARDENING.md](HARDENING.md).
+
 ## 1.1. Contribution
 
 ⭐️ Hopefully you have starred the project ⭐️
