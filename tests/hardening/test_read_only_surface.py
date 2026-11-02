@@ -13,6 +13,8 @@ from degiro_connector.hardened.transport import ALLOWED_OPERATIONS
 from degiro_connector.trading import actions
 from degiro_connector.trading.models import credentials as upstream_credentials
 
+from .conftest import INT_ACCOUNT, LOGIN_OK, SESSION_ID, reply
+
 HARDENED_DIR = Path(hardened.__file__).parent
 ACTIONS_DIR = Path(actions.__file__).parent
 
@@ -20,6 +22,7 @@ EXPECTED_METHODS = {
     "login",
     "close",
     "get_client_details",
+    "get_account_info",
     "get_transactions_history",
     "get_account_overview",
     "get_update",
@@ -44,6 +47,7 @@ def test_transport_allowlist_is_read_only():
     assert set(ALLOWED_OPERATIONS) == {
         "login",
         "client_details",
+        "account_info",
         "transactions_history",
         "account_overview",
         "update",
@@ -126,3 +130,23 @@ def test_file_and_env_credential_helper_is_gone():
     source = Path(upstream_credentials.__file__).read_text()
     assert "DEGIRO_ACCOUNT" not in source
     assert "os.environ" not in source
+
+
+def test_account_info_reads_the_account_path_with_the_session(connected, adapter):
+    adapter.queue(reply(200, {"data": {"baseCurrency": "EUR"}}))
+    body = connected.get_account_info()
+    assert body == {"data": {"baseCurrency": "EUR"}}
+    sent = adapter.sent[-1].request
+    assert sent.method == "GET"
+    assert sent.url.split("?")[0] == (
+        f"https://trader.degiro.nl/trading/secure/v5/account/info/{INT_ACCOUNT};jsessionid={SESSION_ID}"
+    )
+
+
+def test_account_info_needs_client_details_first(client, adapter, credentials):
+    adapter.queue(LOGIN_OK)
+    client.login(credentials)
+    with pytest.raises(DegiroError) as raised:
+        client.get_account_info()
+    assert raised.value.code is ErrorCode.NOT_CONNECTED
+    assert len(adapter.sent) == 1

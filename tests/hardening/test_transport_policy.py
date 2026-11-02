@@ -49,6 +49,7 @@ def test_every_request_has_a_finite_timeout(client, adapter, credentials):
     adapter.queue(
         LOGIN_OK,
         CLIENT_DETAILS_OK,
+        reply(200, {"data": {"baseCurrency": "EUR"}}),
         reply(200, {"data": []}),
         reply(200, {"data": {"cashMovements": []}}),
         reply(200, {"portfolio": {}}),
@@ -57,13 +58,14 @@ def test_every_request_has_a_finite_timeout(client, adapter, credentials):
     )
     client.login(credentials)
     client.get_client_details()
+    client.get_account_info()
     client.get_transactions_history(date(2026, 1, 1), date(2026, 1, 31))
     client.get_account_overview(date(2026, 1, 1), date(2026, 1, 31))
     client.get_update(["portfolio", "cashFunds"])
     client.get_products_info([1, 2])
     client.close()
 
-    assert len(adapter.sent) == 7
+    assert len(adapter.sent) == 8
     assert all(_finite(sent.kwargs["timeout"]) for sent in adapter.sent)
     assert adapter.sent[0].kwargs["timeout"] == (DEFAULT_BUDGET.connect, DEFAULT_BUDGET.read)
     assert adapter.sent[-1].kwargs["timeout"] == (LOGOUT_BUDGET.connect, LOGOUT_BUDGET.read)

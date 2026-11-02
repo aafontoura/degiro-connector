@@ -44,6 +44,10 @@ _JSESSIONID = r";jsessionid=[^/;?#]+"
 ALLOWED_OPERATIONS: dict[str, tuple[str, re.Pattern[str]]] = {
     "login": ("POST", re.compile(r"/login/secure/login/totp")),
     "client_details": ("GET", re.compile(r"/pa/secure/client")),
+    "account_info": (
+        "GET",
+        re.compile(r"/trading/secure/v5/account/info/\d+" + _JSESSIONID),
+    ),
     "transactions_history": (
         "GET",
         re.compile(r"/portfolio-reports/secure/v4/transactions"),

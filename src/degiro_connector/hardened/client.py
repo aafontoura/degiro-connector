@@ -1,7 +1,7 @@
 """The fork's supported surface: read-only DEGIRO access for one sync (H-7).
 
 ``ReadOnlyTradingClient`` exposes exactly: ``login`` (username, password and
-a six-digit one-time code), ``get_client_details``,
+a six-digit one-time code), ``get_client_details``, ``get_account_info``,
 ``get_transactions_history``, ``get_account_overview``, ``get_update`` (portfolio
 and cash only), ``get_products_info`` and ``close``. It does not use the
 upstream dynamic ``API`` or any upstream action, so no order, favourite or note
@@ -173,6 +173,16 @@ class ReadOnlyTradingClient:
             raise DegiroError(ErrorCode.SCHEMA)
         self._int_account = int_account
         return body
+
+    def get_account_info(self) -> Any:
+        """Account settings, including ``baseCurrency``, which client details lack."""
+        session_id = self._require_session()
+        int_account = self._require_account()
+        return self._read(
+            "account_info",
+            f"{urls.ACCOUNT_INFO}/{int_account};jsessionid={session_id}",
+            params={},
+        )
 
     def get_transactions_history(self, from_date: date, to_date: date) -> Any:
         """Executions in the window, ungrouped (one row per fill)."""
