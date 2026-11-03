@@ -2,6 +2,7 @@
 
 ``ReadOnlyTradingClient`` exposes exactly: ``login`` (username, password and
 a six-digit one-time code), ``get_client_details``, ``get_account_info``,
+``get_dividend_calendar``,
 ``get_transactions_history``, ``get_account_overview``, ``get_update`` (portfolio
 and cash only), ``get_products_info`` and ``close``. It does not use the
 upstream dynamic ``API`` or any upstream action, so no order, favourite or note
@@ -33,6 +34,8 @@ MAX_PRODUCT_IDS = 500
 # The session ID is put into paths and query strings; accept only a shape
 # that cannot change where a request goes.
 _SESSION_ID = re.compile(r"[A-Za-z0-9._-]{1,128}")
+_ISIN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
+MAX_CALENDAR_ITEMS = 100
 
 _LOGIN_STATUS_OTP_REQUIRED = 6
 _LOGIN_STATUS_IN_APP_APPROVAL = 12
@@ -183,6 +186,43 @@ class ReadOnlyTradingClient:
             f"{urls.ACCOUNT_INFO}/{int_account};jsessionid={session_id}",
             params={},
         )
+
+    def get_dividend_calendar(
+        self, isin: str, from_date: date, to_date: date, offset: int = 0, limit: int = 25
+    ) -> Any:
+        """One instrument's dividend calendar entries in the window, as DEGIRO answers them.
+
+        Only the dividend calendar: the calendar type is fixed here, not a parameter.
+        """
+        session_id = self._require_session()
+        int_account = self._require_account()
+        if (
+            not isinstance(isin, str)
+            or not _ISIN.fullmatch(isin)
+            or not isinstance(from_date, date)
+            or not isinstance(to_date, date)
+            or from_date > to_date
+            or isinstance(offset, bool)
+            or not isinstance(offset, int)
+            or offset < 0
+            or isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or not 0 < limit <= MAX_CALENDAR_ITEMS
+        ):
+            raise DegiroError(ErrorCode.INVALID_REQUEST)
+        params = {
+            "calendarType": "DividendCalendar",
+            "isin": isin,
+            "startDate": from_date.strftime("%Y-%m-%dT00:00:00Z"),
+            "endDate": to_date.strftime("%Y-%m-%dT23:59:59Z"),
+            "offset": offset,
+            "limit": limit,
+            "sortColumn": "date",
+            "sortType": "asc",
+            "intAccount": int_account,
+            "sessionId": session_id,
+        }
+        return self._read("dividend_calendar", urls.AGENDA, params)
 
     def get_transactions_history(self, from_date: date, to_date: date) -> Any:
         """Executions in the window, ungrouped (one row per fill)."""

@@ -48,6 +48,7 @@ ALLOWED_OPERATIONS: dict[str, tuple[str, re.Pattern[str]]] = {
         "GET",
         re.compile(r"/trading/secure/v5/account/info/\d+" + _JSESSIONID),
     ),
+    "dividend_calendar": ("GET", re.compile(r"/dgtbxdsservice/secure/agenda/v2")),
     "transactions_history": (
         "GET",
         re.compile(r"/portfolio-reports/secure/v4/transactions"),

@@ -15,6 +15,9 @@ from degiro_connector.trading.models import credentials as upstream_credentials
 
 from .conftest import INT_ACCOUNT, LOGIN_OK, SESSION_ID, reply
 
+from datetime import date
+from urllib.parse import parse_qs, urlsplit
+
 HARDENED_DIR = Path(hardened.__file__).parent
 ACTIONS_DIR = Path(actions.__file__).parent
 
@@ -23,6 +26,7 @@ EXPECTED_METHODS = {
     "close",
     "get_client_details",
     "get_account_info",
+    "get_dividend_calendar",
     "get_transactions_history",
     "get_account_overview",
     "get_update",
@@ -48,6 +52,7 @@ def test_transport_allowlist_is_read_only():
         "login",
         "client_details",
         "account_info",
+        "dividend_calendar",
         "transactions_history",
         "account_overview",
         "update",
@@ -150,3 +155,34 @@ def test_account_info_needs_client_details_first(client, adapter, credentials):
         client.get_account_info()
     assert raised.value.code is ErrorCode.NOT_CONNECTED
     assert len(adapter.sent) == 1
+
+
+def test_dividend_calendar_asks_only_for_the_dividend_calendar_of_one_isin(connected, adapter):
+    adapter.queue(reply(200, {"items": [], "offset": 0, "total": 0}))
+    body = connected.get_dividend_calendar("IE00B3RBWM25", date(2022, 1, 1), date(2026, 12, 31))
+    assert body == {"items": [], "offset": 0, "total": 0}
+    sent = adapter.sent[-1].request
+    assert sent.method == "GET"
+    assert sent.url.startswith("https://trader.degiro.nl/dgtbxdsservice/secure/agenda/v2?")
+    query = parse_qs(urlsplit(sent.url).query)
+    assert query["calendarType"] == ["DividendCalendar"]
+    assert query["isin"] == ["IE00B3RBWM25"]
+    assert query["startDate"] == ["2022-01-01T00:00:00Z"]
+    assert query["intAccount"] == [str(INT_ACCOUNT)]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("not-an-isin", date(2022, 1, 1), date(2026, 1, 1)),
+        ("IE00B3RBWM25", date(2026, 1, 1), date(2022, 1, 1)),
+        ("IE00B3RBWM25", date(2022, 1, 1), date(2026, 1, 1), -1),
+        ("IE00B3RBWM25", date(2022, 1, 1), date(2026, 1, 1), 0, 1000),
+    ],
+)
+def test_dividend_calendar_refuses_a_malformed_request_before_sending(connected, adapter, args):
+    before = len(adapter.sent)
+    with pytest.raises(DegiroError) as raised:
+        connected.get_dividend_calendar(*args)
+    assert raised.value.code is ErrorCode.INVALID_REQUEST
+    assert len(adapter.sent) == before
